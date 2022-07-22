@@ -34,7 +34,6 @@ import reactor.core.Disposable;
 import reactor.core.Exceptions;
 import reactor.core.Scannable;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Sinks;
 import reactor.util.annotation.NonNull;
 import reactor.util.annotation.Nullable;
 
@@ -73,7 +72,7 @@ final class DelegateServiceScheduler implements Scheduler, Scannable {
 				throw new IllegalStateException("executor is null after implicit start()");
 			}
 		}
-		return s.executor;
+		return s.resource;
 	}
 
 	@Override
@@ -112,7 +111,7 @@ final class DelegateServiceScheduler implements Scheduler, Scannable {
 	@Override
 	public boolean isDisposed() {
 		SchedulerState current = state;
-		return current != null && current.executor == SchedulerState.TERMINATED;
+		return current != null && current.resource == SchedulerState.TERMINATED;
 	}
 
 	@Override
@@ -120,13 +119,13 @@ final class DelegateServiceScheduler implements Scheduler, Scannable {
 		for (;;) {
 			SchedulerState previous = state;
 
-			if (previous != null && previous.executor == TERMINATED) {
+			if (previous != null && previous.resource == TERMINATED) {
 				return;
 			}
 
 			if (STATE.compareAndSet(this, previous, SchedulerState.terminated(previous))) {
 				if (previous != null) {
-					previous.executor.shutdownNow();
+					previous.resource.shutdownNow();
 				}
 				return;
 			}
@@ -139,14 +138,14 @@ final class DelegateServiceScheduler implements Scheduler, Scannable {
 			for (;;) {
 				SchedulerState previous = state;
 
-				if (previous != null && previous.executor == TERMINATED) {
+				if (previous != null && previous.resource == TERMINATED) {
 					return previous.onDispose;
 				}
 
 				SchedulerState next = SchedulerState.terminated(previous);
 				if (STATE.compareAndSet(this, previous, next)) {
 					if (previous != null) {
-						previous.executor.shutdown();
+						previous.resource.shutdown();
 					}
 					return next.onDispose;
 				}
@@ -169,7 +168,7 @@ final class DelegateServiceScheduler implements Scheduler, Scannable {
 
 		SchedulerState s = state;
 		if (s != null) {
-			return Schedulers.scanExecutor(s.executor, key);
+			return Schedulers.scanExecutor(s.resource, key);
 		}
 		return null;
 	}

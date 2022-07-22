@@ -122,7 +122,7 @@ public abstract class SchedulersStressTest {
 
 		@Override
 		boolean isTerminated() {
-			return scheduler.state.executor.isTerminated();
+			return scheduler.state.resource.isTerminated();
 		}
 
 		{

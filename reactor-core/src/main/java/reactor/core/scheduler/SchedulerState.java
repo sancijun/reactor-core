@@ -19,31 +19,26 @@ package reactor.core.scheduler;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
-final class SchedulerState {
+final class SchedulerState<T> {
 
-	static final ScheduledExecutorService TERMINATED;
-
-	static {
-		TERMINATED = Executors.newSingleThreadScheduledExecutor();
-		TERMINATED.shutdownNow();
-	}
-
-	final ScheduledExecutorService executor;
+	final T resource;
 	final Mono<Void>               onDispose;
 
-	private SchedulerState(ScheduledExecutorService executor, Mono<Void> onDispose) {
-		this.executor = executor;
+	private SchedulerState(T resource, Mono<Void> onDispose) {
+		this.resource = resource;
 		this.onDispose = onDispose;
 	}
 
-	static SchedulerState fresh(final ScheduledExecutorService executor) {
+	static <T> SchedulerState<T> fresh(final T resource, AwaitableResource<T> awaiter) {
 		return new SchedulerState(
-				executor,
+				resource,
 				Flux.<Void>create(sink -> {
 					    // TODO(dj): consider a shared pool for all disposeGracefully background tasks
 					    // as part of Schedulers internal API
@@ -51,7 +46,7 @@ final class SchedulerState {
 						    while (!Thread.currentThread()
 						                  .isInterrupted()) {
 							    try {
-								    if (executor.awaitTermination(1, TimeUnit.SECONDS)) {
+								    if (awaiter.await(resource, 1, TimeUnit.SECONDS)) {
 									    sink.complete();
 									    return;
 								    }
@@ -72,8 +67,11 @@ final class SchedulerState {
 		);
 	}
 
-	static SchedulerState terminated(@Nullable SchedulerState base) {
-		return new SchedulerState(TERMINATED,
-				base == null ? Mono.empty() : base.onDispose);
+	static <T> SchedulerState<T> terminated(T tombstone, @Nullable SchedulerState<T> base) {
+		return new SchedulerState<T>(tombstone, base == null ? Mono.empty() : base.onDispose);
+	}
+
+	interface AwaitableResource<T> {
+		boolean await(T resource, long timeout, TimeUnit timeUnit) throws InterruptedException;
 	}
 }

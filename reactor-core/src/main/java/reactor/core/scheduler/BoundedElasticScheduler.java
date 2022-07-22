@@ -22,6 +22,7 @@ import reactor.core.Exceptions;
 import reactor.core.Scannable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.SchedulerState.AwaitableResource;
 import reactor.util.Logger;
 import reactor.util.Loggers;
 import reactor.util.annotation.Nullable;
@@ -74,7 +75,7 @@ import static reactor.core.scheduler.BoundedElasticScheduler.SchedulerState.term
  *
  * @author Simon Baslé
  */
-final class BoundedElasticScheduler implements Scheduler, Scannable {
+final class BoundedElasticScheduler implements Scheduler, Scannable, AwaitableResource<BoundedElasticScheduler.BoundedServices> {
 
 	static final Logger LOGGER = Loggers.getLogger(BoundedElasticScheduler.class);
 
@@ -98,6 +99,30 @@ final class BoundedElasticScheduler implements Scheduler, Scannable {
 	volatile SchedulerState state;
 	static final AtomicReferenceFieldUpdater<BoundedElasticScheduler, SchedulerState> STATE =
 			AtomicReferenceFieldUpdater.newUpdater(BoundedElasticScheduler.class, SchedulerState.class, "state");
+
+	@Override
+	public boolean await(BoundedServices services, long timeout, TimeUnit timeUnit) {
+		BoundedState[] statesToAwait = services.busyArray;
+		int nextToAwait = 0;
+		while (!Thread.currentThread().isInterrupted()) {
+			try {
+				while (nextToAwait < statesToAwait.length) {
+					if (statesToAwait[nextToAwait].executor.awaitTermination(1, TimeUnit.SECONDS)) {
+						nextToAwait++;
+					} else {
+						break;
+					}
+				}
+				if (nextToAwait == statesToAwait.length) {
+					return true;
+				}
+			}
+			catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return false;
+			}
+		}
+	}
 
 	/**
 	 * This constructor lets define millisecond-grained TTLs and a custom {@link Clock},
@@ -172,6 +197,7 @@ final class BoundedElasticScheduler implements Scheduler, Scannable {
 			if (b == null) {
 				b = SchedulerState.fresh(
 						new BoundedServices(this),
+						this,
 						Executors.newScheduledThreadPool(1, EVICTOR_FACTORY)
 				);
 			}
