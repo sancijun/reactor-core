@@ -28,8 +28,8 @@ import reactor.util.context.Context;
 
 
 /**
- * An unbounded Java Lambda adapter to {@link Subscriber}
- *
+ * {@link Subscriber} 的无界 Java Lambda 适配器
+ * 在产生订阅时往往会自定义一些元素消费操作，这些操作会被Reactor 3包装成一个LambdaSubscriber类型的实例。
  * @param <T> the value type
  */
 final class LambdaSubscriber<T>
@@ -39,7 +39,7 @@ final class LambdaSubscriber<T>
 	final Consumer<? super Throwable>    errorConsumer;
 	final Runnable                       completeConsumer;
 	final Consumer<? super Subscription> subscriptionConsumer;
-
+	// 将 subscription 封装为 原子类型
 	volatile Subscription subscription;
 	static final AtomicReferenceFieldUpdater<LambdaSubscriber, Subscription> S =
 			AtomicReferenceFieldUpdater.newUpdater(LambdaSubscriber.class,
@@ -47,11 +47,10 @@ final class LambdaSubscriber<T>
 					"subscription");
 
 	/**
-	 * Create a {@link Subscriber} reacting onNext, onError and onComplete. The subscriber
-	 * will automatically request Long.MAX_VALUE onSubscribe.
+	 * 创建一个响应 onNext、onError 和 onComplete 的 {@link Subscriber}。
+	 * 订阅者会自动请求 Long.MAX_VALUE onSubscribe。
 	 * <p>
-	 * The argument {@code subscriptionHandler} is executed once by new subscriber to
-	 * generate a context shared by every request calls.
+	 * 参数 {@code subscriptionHandler} 由新订阅者执行一次以生成每个请求调用共享的上下文。
 	 *
 	 * @param consumer A {@link Consumer} with argument onNext data
 	 * @param errorConsumer A {@link Consumer} called onError
@@ -70,7 +69,13 @@ final class LambdaSubscriber<T>
 		this.completeConsumer = completeConsumer;
 		this.subscriptionConsumer = subscriptionConsumer;
 	}
+	// 核心的都是调用了 Subscription.request() 函数
 
+	/**
+	 * 如果没有定义subscriptionConsumer，默认会最大化元素请求数量。
+	 * 在消费下发元素的时候调用onNext方法
+	 * @param s
+	 */
 	@Override
 	public final void onSubscribe(Subscription s) {
 		if (Operators.validate(subscription, s)) {

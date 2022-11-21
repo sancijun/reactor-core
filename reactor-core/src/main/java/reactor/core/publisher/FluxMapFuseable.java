@@ -39,7 +39,7 @@ final class FluxMapFuseable<T, R> extends FluxOperator<T, R> implements Fuseable
 	final Function<? super T, ? extends R> mapper;
 
 	/**
-	 * Constructs a FluxMap instance with the given source and mapper.
+	 * 使用给定的源和映射器构造一个 FluxMap 实例。
 	 *
 	 * @param source the source Publisher instance
 	 * @param mapper the mapper function

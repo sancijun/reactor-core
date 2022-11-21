@@ -687,11 +687,12 @@ final class FluxPublishOn<T> extends FluxOperator<T, T> implements Fuseable {
 				trySchedule(this, null, null);
 				return;
 			}
-
+			// 如果已经结束下发，那么采用放弃策略Operators.onNextDropped。
 			if (done) {
 				Operators.onNextDropped(t, actual.currentContext());
 				return;
 			}
+			// 如果往队列中添加元素失败，那么针对这个异常包装出一个错误事件Operators.onOperatorError，用于下发错误
 			if (!queue.offer(t)) {
 				error = Operators.onOperatorError(s, Exceptions.failWithOverflow(Exceptions.BACKPRESSURE_ERROR_QUEUE_FULL), t,
 						actual.currentContext());

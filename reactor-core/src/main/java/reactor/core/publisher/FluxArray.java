@@ -26,7 +26,7 @@ import reactor.core.Scannable;
 import reactor.util.annotation.Nullable;
 
 /**
- * Emits the contents of a wrapped (shared) array.
+ * 发出包装（共享）数组的内容。
  *
  * @param <T> the value type
  *
@@ -36,6 +36,7 @@ final class FluxArray<T> extends Flux<T> implements Fuseable, Scannable {
 
 	final T[] array;
 
+	// FluxArray 也仅仅是将 array 储存了起来，然后就返回回来了
 	@SafeVarargs
 	public FluxArray(T... array) {
 		this.array = Objects.requireNonNull(array, "array");
@@ -47,6 +48,7 @@ final class FluxArray<T> extends Flux<T> implements Fuseable, Scannable {
 			Operators.complete(s);
 			return;
 		}
+		// 将 Subscriber 包裹成一个 Subscription 对象，并将其 作为onSubscribe 函数调用的对象
 		if (s instanceof ConditionalSubscriber) {
 			s.onSubscribe(new ArrayConditionalSubscription<>((ConditionalSubscriber<? super T>) s, array));
 		}
@@ -55,6 +57,7 @@ final class FluxArray<T> extends Flux<T> implements Fuseable, Scannable {
 		}
 	}
 
+	// actual 是 传入的 subscriber，最终对应到 lamada 表达式
 	@Override
 	public void subscribe(CoreSubscriber<? super T> actual) {
 		subscribe(actual, array);

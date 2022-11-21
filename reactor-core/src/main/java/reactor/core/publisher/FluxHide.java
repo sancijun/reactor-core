@@ -22,8 +22,7 @@ import reactor.core.Fuseable;
 import reactor.util.annotation.Nullable;
 
 /**
- * Hides the identities of the upstream Publisher object and its Subscription
- * as well. 
+ * 隐藏上游发布者对象及其订阅的身份。
  *
  * @param <T> the value type
  * @see <a href="https://github.com/reactor/reactive-streams-commons">Reactive-Streams-Commons</a>

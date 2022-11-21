@@ -37,8 +37,7 @@ import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
 /**
- * Provides a multi-valued sink API for a callback that is called for each individual
- * Subscriber.
+ * 为为每个订阅者调用的回调提供多值接收器 API。
  *
  * @param <T> the value type
  */
@@ -367,6 +366,10 @@ final class FluxCreate<T> extends Flux<T> implements Scannable {
 		}
 	}
 
+	/**
+	 * 用于承接上游源生产者与下游订阅者之间联系
+	 * @param <T>
+	 */
 	static abstract class BaseSink<T> extends AtomicBoolean
 			implements FluxSink<T>, InnerProducer<T> {
 
@@ -460,6 +463,13 @@ final class FluxCreate<T> extends Flux<T> implements Scannable {
 			return OperatorDisposables.isDisposed(disposable);
 		}
 
+		/**
+		 * 在产生订阅的时候，需要先确定元素请求数量，即订阅者会先调用onSubscribe方法来确定数量，
+		 * 并在此onSubscribe方法中调用FluxCreate.BaseSink＃request方法，
+		 * 在其最后调用onRequestedFromDownstream，即根据不同的策略来执行相应的元素下发动作（支持背压的话，会调用BufferAsyncSink内的drain方法）；
+		 * 接着接入生产元素的逻辑Consumer<？super FluxSink<T>>source，进行从生产者到消费者的对接，
+		 * @param n
+		 */
 		@Override
 		public final void request(long n) {
 			if (Operators.validate(n)) {
@@ -633,6 +643,7 @@ final class FluxCreate<T> extends Flux<T> implements Scannable {
 		}
 
 	}
+
 
 	static final class BufferAsyncSink<T> extends BaseSink<T> {
 

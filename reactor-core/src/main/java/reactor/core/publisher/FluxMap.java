@@ -37,10 +37,14 @@ final class FluxMap<T, R> extends FluxOperator<T, R> {
 	final Function<? super T, ? extends R> mapper;
 
 	/**
-	 * Constructs a FluxMap instance with the given source and mapper.
+	 * 使用给定的源和映射器构造一个 FluxMap 实例。
+	 * 每次将一个 操作 和 源Publisher 组合变成一个 新Publisher
 	 *
-	 * @param source the source Publisher instance
-	 * @param mapper the mapper function
+	 * 在 subscribe() 之前，我们什么都没做，只是在不断的包裹 Publisher
+	 * 将作为原始的 Publisher 一层又一层的返回回来
+	 *
+	 * @param source 源发布者实例
+	 * @param mapper 映射器函数
 	 *
 	 * @throws NullPointerException if either {@code source} or {@code mapper} is null.
 	 */

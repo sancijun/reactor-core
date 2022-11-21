@@ -25,41 +25,38 @@ import org.reactivestreams.Subscription;
 import reactor.util.annotation.Nullable;
 
 /**
- * A micro API for stream fusion, in particular marks producers that support a {@link QueueSubscription}.
+ * 用于流融合的微型 API，特别是标记支持 {@link QueueSubscription} 的生产者。
+ * 用于对那些内部有队列支持的subscription进行优化。
  */
 public interface Fuseable {
 
-	/** Indicates the QueueSubscription can't support the requested mode. */
+	/** 表示 QueueSubscription 不支持请求的模式。 */
 	int NONE = 0;
-	/** Indicates the QueueSubscription can perform sync-fusion. */
+	/** 指示 QueueSubscription 可以执行同步融合。 */
 	int SYNC = 1;
-	/** Indicates the QueueSubscription can perform only async-fusion. */
+	/** 指示 QueueSubscription 只能执行异步融合。 */
 	int ASYNC = 2;
-	/** Indicates the QueueSubscription should decide what fusion it performs (input only). */
+	/** 指示 QueueSubscription 应该决定它执行什么融合（仅限输入）。 */
 	int ANY = 3;
 	/**
-	 * Indicates that the queue will be drained from another thread
-	 * thus any queue-exit computation may be invalid at that point.
+	 * 指示队列将从另一个线程中排出，因此此时任何队列退出计算都可能无效。
 	 * <p>
-	 * For example, an {@code asyncSource.map().publishOn().subscribe()} sequence where {@code asyncSource}
-	 * is async-fuseable: publishOn may fuse the whole sequence into a single Queue. That in turn
-	 * could invoke the mapper function from its {@code poll()} method from another thread,
-	 * whereas the unfused sequence would have invoked the mapper on the previous thread.
-	 * If such mapper invocation is costly, it would escape its thread boundary this way.
+	 * 例如，一个 {@code asyncSource.map().publishOn().subscribe()} 序列，
+	 * 其中 {@code asyncSource} 是异步可融合的：publishOn 可以将整个序列融合到一个队列中。
+	 * 这反过来可以从另一个线程的 {@code poll()} 方法调用映射器函数，而未融合的序列会在前一个线程上调用映射器。
+	 * 如果这样的映射器调用代价高昂，它将以这种方式逃避其线程边界。
 	 */
 	int THREAD_BARRIER = 4;
 
 	/**
-	 * A subscriber variant that can immediately tell if it consumed
-	 * the value or not, directly allowing a new value to be sent if
-	 * it didn't. This avoids the usual request(1) round-trip for dropped
-	 * values.
+	 * 订阅者变体可以立即判断它是否消耗了该值，如果没有消耗则直接允许发送新值。
+	 * 这避免了通常的 request(1) 丢弃值的往返。
 	 *
 	 * @param <T> the value type
 	 */
 	interface ConditionalSubscriber<T> extends CoreSubscriber<T> {
 		/**
-		 * Try consuming the value and return true if successful.
+		 * 尝试使用该值并在成功时返回 true。
 		 * @param t the value to consume, not null
 		 * @return true if consumed, false if dropped and a new value can be immediately sent
 		 */
@@ -67,17 +64,14 @@ public interface Fuseable {
 	}
 
 	/**
-	 * Support contract for queue-fusion based optimizations on subscriptions.
+	 * 支持基于队列融合的订阅优化合同。
 	 *
 	 * <ul>
 	 *  <li>
-	 *  Synchronous sources which have fixed size and can
-	 *  emit their items in a pull fashion, thus avoiding the request-accounting
-	 *  overhead in many cases.
+	 *  具有固定大小并且可以以拉取方式发出其项目的同步源，因此在许多情况下避免了请求会计开销。
 	 *  </li>
 	 *  <li>
-	 *  Asynchronous sources which can act as a queue and subscription at
-	 *  the same time, saving on allocating another queue most of the time.
+	 *  可以同时充当队列和订阅的异步源，节省了大部分时间分配另一个队列的时间。
 	 * </li>
 	 * </ul>
 	 *
@@ -92,16 +86,11 @@ public interface Fuseable {
 				" Instances shouldn't be used/exposed as Queue outside of Reactor operators.";
 
 		/**
-		 * Request a specific fusion mode from this QueueSubscription.
+		 * 从此 QueueSubscription 请求特定的融合模式。
 		 * <p>
-		 * One should request either SYNC, ASYNC or ANY modes (never NONE)
-		 * and the implementor should return NONE, SYNC or ASYNC (never ANY).
+		 * 应该请求 SYNC、ASYNC 或 ANY 模式（绝不是 NONE）并且实现者应该返回 NONE、SYNC 或 ASYNC（绝不是 ANY）。
 		 * <p>
-		 * For example, if a source supports only ASYNC fusion but
-		 * the intermediate operator supports only SYNC fuseable sources,
-		 * the operator may request SYNC fusion and the source can reject it via
-		 * NONE, thus the operator can return NONE as well to downstream and the
-		 * fusion doesn't happen.
+		 * 例如，如果源仅支持 ASYNC 融合，但中间操作员仅支持 SYNC 可融合源，则操作员可能会请求 SYNC 融合，并且源可以通过 NONE 拒绝它，因此操作员也可以向下游返回 NONE，并且融合不会不会发生。
 		 *
 		 * @param requestedMode the mode requested by the intermediate operator
 		 * @return the actual fusion mode activated

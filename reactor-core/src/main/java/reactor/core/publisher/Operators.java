@@ -266,10 +266,13 @@ public abstract class Operators {
 	}
 
 	/**
-	 * An unexpected event is about to be dropped.
+	 * 一个意外事件即将被丢弃。
 	 * <p>
-	 * If no hook is registered for {@link Hooks#onNextDropped(Consumer)}, the dropped
-	 * element is just logged at DEBUG level.
+	 *   如果没有为 {@link Hooks#onNextDropped(Consumer)} 注册挂钩，则删除的元素仅在 DEBUG 级别记录。
+	 *
+	 * 由actual.currentContext可知，传入的context会产生一个Context0实例，这里的0代表其中没有键值对，
+	 * 而假如这个数是1，则代表有一个键值对，这个Context0实例是不可变的，
+	 * 调用该Context0实例的put方法，也就是重新生成一个全新的实例，这样也就保证了整个操作上下文的安全
 	 *
 	 * @param <T> the dropped value type
 	 * @param t the dropped data

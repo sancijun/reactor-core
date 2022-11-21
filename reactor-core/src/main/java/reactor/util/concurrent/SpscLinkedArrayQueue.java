@@ -27,8 +27,7 @@ import reactor.util.annotation.Nullable;
 
 
 /**
- * An unbounded, array-backed single-producer, single-consumer queue with a fixed link
- * size.
+ * 具有固定链接大小的无界、数组支持的单一生产者、单一消费者队列。
  * <p>
  * This implementation is based on JCTools' SPSC algorithms: <a
  * href='https://github.com/JCTools/JCTools/blob/master/jctools-core/src/main/java/org/jctools/queues/SpscUnboundedArrayQueue.java'>SpscUnboundedArrayQueue</a>
@@ -61,7 +60,13 @@ final class SpscLinkedArrayQueue<T> extends AbstractQueue<T>
 
 	static final Object NEXT = new Object();
 
+	//首先得到一个原子类型的数组，把该数组最后一个位置空出来，用于存储下一个数组的引用。
+	// 然后假设在存储一个元素A时，若发现将该元素存储到数组中会造成数组内部空间占满，
+	// 那么此时在A要存储的位置放置一个关键字元素NEXT（一个final常量），用于标记此数组已满，
+	// 该关键字元素表示：请到本数组最后一个位置获取下一个数组的引用和NEXT在原数组中相对位置的偏移量，
+	// 并在下一个数组相同的偏移量位置存入元素A。
 	SpscLinkedArrayQueue(int linkSize) {
+		// 分别对索引和producerArray进行原子化，接着设计一个无界队列
 		int c = Queues.ceilingNextPowerOfTwo(Math.max(8, linkSize));
 		this.producerArray = this.consumerArray = new AtomicReferenceArray<>(c + 1);
 		this.mask = c - 1;

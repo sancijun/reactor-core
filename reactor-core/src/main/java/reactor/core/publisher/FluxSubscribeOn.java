@@ -60,12 +60,13 @@ final class FluxSubscribeOn<T> extends FluxOperator<T, T> {
 			Operators.error(actual, Operators.onOperatorError(e, actual.currentContext()));
 			return;
 		}
-
+		// MARK 构建了一个新的 Subscriber 叫 SubscribeOn，将 actual 包裹成一个新的对象
 		SubscribeOnSubscriber<T> parent = new SubscribeOnSubscriber<>(source,
 				actual, worker, requestOnSeparateThread);
 		actual.onSubscribe(parent);
 
 		try {
+			// 进行了 线程的切换
 			worker.schedule(parent);
 		}
 		catch (RejectedExecutionException ree) {
